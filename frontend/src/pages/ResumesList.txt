@@ -1,0 +1,15 @@
+import React from "react";
+
+function ResumesList() {
+  return (
+    <div>
+
+      <h2>Uploaded Resumes</h2>
+
+      <p>Your uploaded resumes will appear here.</p>
+
+    </div>
+  );
+}
+
+export default ResumesList;
