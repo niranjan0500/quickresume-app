@@ -15,7 +15,7 @@ function Register() {
 
     try {
 
-      const res = await API.post("/users/register", {
+      await API.post("/users/register", {
         name,
         email,
         password
