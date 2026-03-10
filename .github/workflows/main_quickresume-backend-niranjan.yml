@@ -61,7 +61,8 @@ jobs:
         with:
           app-name: 'quickresume-backend-niranjan'
           slot-name: 'Production'
-          package: backend
+          package: .
 
           
+
 
