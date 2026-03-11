@@ -1,7 +1,11 @@
 const appInsights = require("applicationinsights");
 
-if (process.env.APPLICATIONINSIGHTS_CONNECTION_STRING) {
-  appInsights.setup(process.env.APPLICATIONINSIGHTS_CONNECTION_STRING)
+const connectionString =
+  process.env.APPLICATIONINSIGHTS_CONNECTION_STRING ||
+  process.env.APPINSIGHTS_INSTRUMENTATIONKEY;
+
+if (connectionString) {
+  appInsights.setup(connectionString)
     .setAutoCollectRequests(true)
     .setAutoCollectExceptions(true)
     .setAutoCollectDependencies(true)
