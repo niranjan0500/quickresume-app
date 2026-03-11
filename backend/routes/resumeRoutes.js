@@ -9,22 +9,19 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 
 // Absolute path for uploads folder
-const uploadDir = path.join(__dirname, "..", "uploads");
+const uploadDir = "/home/site/wwwroot/uploads";
 
-// Ensure uploads folder exists (important for Azure)
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-
-// Multer storage configuration
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadDir);   // IMPORTANT: use absolute path
+    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + "-" + file.originalname);
-  },
+  }
 });
 
 const upload = multer({ storage });
