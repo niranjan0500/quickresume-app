@@ -1,12 +1,13 @@
-// Application Insights setup (must be at the top)
 const appInsights = require("applicationinsights");
 
-appInsights.setup(process.env.APPLICATIONINSIGHTS_CONNECTION_STRING)
-  .setAutoCollectRequests(true)
-  .setAutoCollectExceptions(true)
-  .setAutoCollectDependencies(true)
-  .setAutoCollectPerformance(true)
-  .start();
+if (process.env.APPLICATIONINSIGHTS_CONNECTION_STRING) {
+  appInsights.setup(process.env.APPLICATIONINSIGHTS_CONNECTION_STRING)
+    .setAutoCollectRequests(true)
+    .setAutoCollectExceptions(true)
+    .setAutoCollectDependencies(true)
+    .setAutoCollectPerformance(true)
+    .start();
+}
 
 const express = require("express");
 const mongoose = require("mongoose");
