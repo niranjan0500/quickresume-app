@@ -1,3 +1,13 @@
+// Application Insights setup (must be at the top)
+const appInsights = require("applicationinsights");
+
+appInsights.setup(process.env.APPLICATIONINSIGHTS_CONNECTION_STRING)
+  .setAutoCollectRequests(true)
+  .setAutoCollectExceptions(true)
+  .setAutoCollectDependencies(true)
+  .setAutoCollectPerformance(true)
+  .start();
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -16,11 +26,11 @@ mongoose.connect(process.env.MONGO_URI)
 
 // import routes
 const userRoutes = require("./routes/userRoutes");
-const resumeRoutes = require("./routes/resumeRoutes");   // NEW
+const resumeRoutes = require("./routes/resumeRoutes");
 
 // use routes
 app.use("/api/users", userRoutes);
-app.use("/api/resumes", resumeRoutes);   // NEW
+app.use("/api/resumes", resumeRoutes);
 
 // test route
 app.get("/", (req,res)=>{
@@ -31,5 +41,5 @@ app.get("/", (req,res)=>{
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
