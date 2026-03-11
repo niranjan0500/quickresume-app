@@ -1,32 +1,46 @@
-const authMiddleware = require("../middleware/authMiddleware");
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const Resume = require("../models/Resume");
+const path = require("path");
+const fs = require("fs");
 
+const Resume = require("../models/Resume");
+const authMiddleware = require("../middleware/authMiddleware");
+
+// Ensure uploads folder exists
+const uploadDir = path.join(__dirname, "..", "uploads");
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 // Multer Storage Configuration
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "uploads/");
+    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + "-" + file.originalname);
   },
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
 
 // 1️⃣ Upload Resume API
 router.post("/upload", authMiddleware, upload.single("resume"), async (req, res) => {
   try {
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
     const { name, email } = req.body;
 
     const newResume = new Resume({
       name,
       email,
-      resume: req.file.path,
+      resume: req.file.filename,
     });
 
     await newResume.save();
@@ -56,36 +70,33 @@ router.get("/", authMiddleware, async (req,res)=>{
 
 // 3️⃣ Download Resume API
 router.get("/download/:filename", (req, res) => {
-  const path = require("path");
 
-  const filePath = path.join(__dirname, "..", "uploads", req.params.filename);
+  const filePath = path.join(uploadDir, req.params.filename);
 
-  res.download(filePath, (err) => {
-    if (err) {
-      console.log(err);
-      res.status(404).json({ error: "File not found" });
-    }
-  });
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: "File not found" });
+  }
+
+  res.download(filePath);
 });
-module.exports = router;
 
-const fs = require("fs");
 
-// DELETE Resume
+// 4️⃣ Delete Resume API
 router.delete("/delete/:id", async (req, res) => {
   try {
 
-    // find resume in database
     const resume = await Resume.findById(req.params.id);
 
     if (!resume) {
       return res.status(404).json({ message: "Resume not found" });
     }
 
-    // delete file from uploads folder
-    fs.unlinkSync(resume.resume);
+    const filePath = path.join(uploadDir, resume.resume);
 
-    // delete record from MongoDB
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
     await Resume.findByIdAndDelete(req.params.id);
 
     res.json({ message: "Resume deleted successfully" });
@@ -95,3 +106,5 @@ router.delete("/delete/:id", async (req, res) => {
     res.status(500).json({ error: "Delete failed" });
   }
 });
+
+module.exports = router;

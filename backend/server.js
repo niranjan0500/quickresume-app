@@ -1,6 +1,6 @@
 const appInsights = require("applicationinsights");
 
-// use connection string from Azure environment variables
+// Application Insights Setup
 const connectionString = process.env.APPLICATIONINSIGHTS_CONNECTION_STRING;
 
 if (connectionString) {
@@ -10,7 +10,7 @@ if (connectionString) {
     .setAutoCollectDependencies(true)
     .setAutoCollectPerformance(true)
     .setAutoCollectConsole(true)
-    .setSendLiveMetrics(true)   // important for Live Metrics
+    .setSendLiveMetrics(true)
     .start();
 }
 
@@ -22,17 +22,22 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 
+const app = express();
+
+// ✅ Ensure uploads folder exists (important for Azure)
 const uploadDir = path.join(__dirname, "uploads");
 
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
+  fs.mkdirSync(uploadDir, { recursive: true });
+  console.log("Uploads folder created");
 }
-
-const app = express();
 
 // middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve uploaded files
+app.use("/uploads", express.static(uploadDir));
 
 // connect MongoDB
 mongoose.connect(process.env.MONGO_URI)
@@ -53,7 +58,7 @@ app.get("/", (req,res)=>{
 });
 
 // start server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
