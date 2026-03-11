@@ -8,16 +8,21 @@ const Resume = require("../models/Resume");
 const authMiddleware = require("../middleware/authMiddleware");
 
 
-// Absolute path for uploads folder
+// Azure persistent upload directory
 const uploadDir = "/home/site/wwwroot/uploads";
 
+
+// Ensure uploads folder exists
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
+  console.log("Uploads folder created:", uploadDir);
 }
 
+
+// Multer storage configuration
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadDir);
+    cb(null, uploadDir);   // IMPORTANT: Azure path
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + "-" + file.originalname);
@@ -27,37 +32,49 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 
+// ==============================
 // 1️⃣ Upload Resume API
-router.post("/upload", authMiddleware, upload.single("resume"), async (req, res) => {
-  try {
+// ==============================
+router.post(
+  "/upload",
+  authMiddleware,
+  upload.single("resume"),
+  async (req, res) => {
+    try {
 
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const { name, email } = req.body;
+
+      console.log("Saving file to:", uploadDir);
+      console.log("Uploaded file:", req.file.filename);
+
+      const newResume = new Resume({
+        name,
+        email,
+        resume: req.file.filename
+      });
+
+      await newResume.save();
+
+      res.json({
+        message: "Resume Uploaded Successfully",
+        data: newResume
+      });
+
+    } catch (error) {
+      console.error("Upload Error:", error);
+      res.status(500).json({ error: "Resume Upload Failed" });
     }
-
-    const { name, email } = req.body;
-
-    const newResume = new Resume({
-      name,
-      email,
-      resume: req.file.filename
-    });
-
-    await newResume.save();
-
-    res.json({
-      message: "Resume Uploaded Successfully",
-      data: newResume,
-    });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Resume Upload Failed" });
   }
-});
+);
 
 
+// ==============================
 // 2️⃣ Get All Resumes API
+// ==============================
 router.get("/", authMiddleware, async (req, res) => {
   try {
 
@@ -66,12 +83,15 @@ router.get("/", authMiddleware, async (req, res) => {
     res.json(resumes);
 
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Failed to fetch resumes" });
   }
 });
 
 
+// ==============================
 // 3️⃣ Download Resume API
+// ==============================
 router.get("/download/:filename", (req, res) => {
 
   const filePath = path.join(uploadDir, req.params.filename);
@@ -81,11 +101,12 @@ router.get("/download/:filename", (req, res) => {
   }
 
   res.download(filePath);
-
 });
 
 
+// ==============================
 // 4️⃣ Delete Resume API
+// ==============================
 router.delete("/delete/:id", async (req, res) => {
   try {
 
@@ -100,15 +121,16 @@ router.delete("/delete/:id", async (req, res) => {
     // delete file if exists
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
+      console.log("File deleted:", filePath);
     }
 
-    // delete database record
+    // delete DB record
     await Resume.findByIdAndDelete(req.params.id);
 
     res.json({ message: "Resume deleted successfully" });
 
   } catch (err) {
-    console.log(err);
+    console.error(err);
     res.status(500).json({ error: "Delete failed" });
   }
 });
