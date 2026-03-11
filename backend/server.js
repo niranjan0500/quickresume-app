@@ -1,8 +1,7 @@
 const appInsights = require("applicationinsights");
 
-const connectionString =
-  process.env.APPLICATIONINSIGHTS_CONNECTION_STRING ||
-  process.env.APPINSIGHTS_INSTRUMENTATIONKEY;
+// use connection string from Azure environment variables
+const connectionString = process.env.APPLICATIONINSIGHTS_CONNECTION_STRING;
 
 if (connectionString) {
   appInsights.setup(connectionString)
@@ -10,6 +9,8 @@ if (connectionString) {
     .setAutoCollectExceptions(true)
     .setAutoCollectDependencies(true)
     .setAutoCollectPerformance(true)
+    .setAutoCollectConsole(true)
+    .setSendLiveMetrics(true)   // important for Live Metrics
     .start();
 }
 
