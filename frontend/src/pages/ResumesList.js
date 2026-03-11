@@ -63,7 +63,7 @@ function ResumesList(){
               <span>{resume.name}</span>
 
               <a
-              href={`http://localhost:5000/api/resumes/download/${resume.resume.split("\\").pop()}`}
+             href={`https://quickresume-backend-niranjan.azurewebsites.net/uploads/${encodeURIComponent(resume.resume)}`}
               target="_blank"
               rel="noreferrer"
               style={{
