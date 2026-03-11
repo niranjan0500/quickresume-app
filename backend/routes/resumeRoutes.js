@@ -7,17 +7,20 @@ const fs = require("fs");
 const Resume = require("../models/Resume");
 const authMiddleware = require("../middleware/authMiddleware");
 
-// Ensure uploads folder exists
+
+// Absolute path for uploads folder
 const uploadDir = path.join(__dirname, "..", "uploads");
 
+// Ensure uploads folder exists (important for Azure)
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Multer Storage Configuration
+
+// Multer storage configuration
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadDir);
+    cb(null, uploadDir);   // IMPORTANT: use absolute path
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + "-" + file.originalname);
@@ -40,7 +43,7 @@ router.post("/upload", authMiddleware, upload.single("resume"), async (req, res)
     const newResume = new Resume({
       name,
       email,
-      resume: req.file.filename,
+      resume: req.file.filename
     });
 
     await newResume.save();
@@ -58,10 +61,13 @@ router.post("/upload", authMiddleware, upload.single("resume"), async (req, res)
 
 
 // 2️⃣ Get All Resumes API
-router.get("/", authMiddleware, async (req,res)=>{
+router.get("/", authMiddleware, async (req, res) => {
   try {
+
     const resumes = await Resume.find();
+
     res.json(resumes);
+
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch resumes" });
   }
@@ -78,6 +84,7 @@ router.get("/download/:filename", (req, res) => {
   }
 
   res.download(filePath);
+
 });
 
 
@@ -93,10 +100,12 @@ router.delete("/delete/:id", async (req, res) => {
 
     const filePath = path.join(uploadDir, resume.resume);
 
+    // delete file if exists
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
 
+    // delete database record
     await Resume.findByIdAndDelete(req.params.id);
 
     res.json({ message: "Resume deleted successfully" });
@@ -106,5 +115,6 @@ router.delete("/delete/:id", async (req, res) => {
     res.status(500).json({ error: "Delete failed" });
   }
 });
+
 
 module.exports = router;
