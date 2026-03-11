@@ -8,25 +8,28 @@ const Resume = require("../models/Resume");
 const authMiddleware = require("../middleware/authMiddleware");
 
 
-// Azure persistent upload directory
-const uploadDir = "/home/site/wwwroot/uploads";
+// Detect environment (Azure or Local)
+const uploadDir = process.env.WEBSITE_INSTANCE_ID
+  ? "/home/site/wwwroot/uploads" // Azure
+  : path.join(__dirname, "..", "uploads"); // Local machine
 
 
 // Ensure uploads folder exists
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
-  console.log("Uploads folder created:", uploadDir);
 }
+
+console.log("Upload directory:", uploadDir);
 
 
 // Multer storage configuration
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadDir);   // IMPORTANT: Azure path
+    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + "-" + file.originalname);
-  }
+  },
 });
 
 const upload = multer({ storage });
@@ -96,6 +99,8 @@ router.get("/download/:filename", (req, res) => {
 
   const filePath = path.join(uploadDir, req.params.filename);
 
+  console.log("Downloading file from:", filePath);
+
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: "File not found" });
   }
@@ -124,7 +129,7 @@ router.delete("/delete/:id", async (req, res) => {
       console.log("File deleted:", filePath);
     }
 
-    // delete DB record
+    // delete record from database
     await Resume.findByIdAndDelete(req.params.id);
 
     res.json({ message: "Resume deleted successfully" });
