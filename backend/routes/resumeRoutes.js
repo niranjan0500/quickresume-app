@@ -1,37 +1,20 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+const { BlobServiceClient } = require("@azure/storage-blob");
 
 const Resume = require("../models/Resume");
 const authMiddleware = require("../middleware/authMiddleware");
 
+// Azure Blob Storage Connection
+const blobServiceClient = BlobServiceClient.fromConnectionString(
+  process.env.AZURE_STORAGE_CONNECTION_STRING
+);
 
-// Detect environment (Azure or Local)
-const uploadDir = process.env.WEBSITE_INSTANCE_ID
-  ? "/home/site/wwwroot/uploads" // Azure
-  : path.join(__dirname, "..", "uploads"); // Local machine
+const containerClient = blobServiceClient.getContainerClient("resumes");
 
-
-// Ensure uploads folder exists
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-console.log("Upload directory:", uploadDir);
-
-
-// Multer storage configuration
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
-
+// Multer memory storage (file stored in RAM temporarily)
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 
@@ -51,13 +34,20 @@ router.post(
 
       const { name, email } = req.body;
 
-      console.log("Saving file to:", uploadDir);
-      console.log("Uploaded file:", req.file.filename);
+      const blobName = Date.now() + "-" + req.file.originalname;
+
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+      await blockBlobClient.uploadData(req.file.buffer);
+
+      const blobUrl = blockBlobClient.url;
+
+      console.log("File uploaded to Blob:", blobUrl);
 
       const newResume = new Resume({
         name,
         email,
-        resume: req.file.filename
+        resumeUrl: blobUrl
       });
 
       await newResume.save();
@@ -95,17 +85,25 @@ router.get("/", authMiddleware, async (req, res) => {
 // ==============================
 // 3️⃣ Download Resume API
 // ==============================
-router.get("/download/:filename", (req, res) => {
+// Since files are now in Blob Storage, frontend can directly use blob URL
+router.get("/download/:id", async (req, res) => {
 
-  const filePath = path.join(uploadDir, req.params.filename);
+  try {
 
-  console.log("Downloading file from:", filePath);
+    const resume = await Resume.findById(req.params.id);
 
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "File not found" });
+    if (!resume) {
+      return res.status(404).json({ error: "Resume not found" });
+    }
+
+    res.json({
+      downloadUrl: resume.resumeUrl
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Download failed" });
   }
-
-  res.download(filePath);
 });
 
 
@@ -121,15 +119,15 @@ router.delete("/delete/:id", async (req, res) => {
       return res.status(404).json({ message: "Resume not found" });
     }
 
-    const filePath = path.join(uploadDir, resume.resume);
+    // extract blob name from URL
+    const blobName = resume.resumeUrl.split("/").pop();
 
-    // delete file if exists
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      console.log("File deleted:", filePath);
-    }
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-    // delete record from database
+    await blockBlobClient.deleteIfExists();
+
+    console.log("Blob deleted:", blobName);
+
     await Resume.findByIdAndDelete(req.params.id);
 
     res.json({ message: "Resume deleted successfully" });

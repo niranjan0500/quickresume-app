@@ -22,10 +22,37 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 
-const app = express(); // ✅ create app first
+// ✅ Azure Blob Storage SDK
+const { BlobServiceClient } = require("@azure/storage-blob");
+
+const app = express();
 
 
-// Detect environment (Azure vs Local)
+// ============================
+// Azure Blob Storage Setup
+// ============================
+
+const blobConnectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+
+let containerClient = null;
+
+if (blobConnectionString) {
+  const blobServiceClient =
+    BlobServiceClient.fromConnectionString(blobConnectionString);
+
+  containerClient = blobServiceClient.getContainerClient("resumes");
+
+  console.log("Azure Blob Storage connected");
+}
+
+// Export container client so routes can use it
+module.exports.containerClient = containerClient;
+
+
+// ============================
+// Detect environment
+// ============================
+
 const uploadDir = process.env.WEBSITE_INSTANCE_ID
   ? "/home/site/wwwroot/uploads"
   : path.join(__dirname, "uploads");
@@ -47,7 +74,10 @@ app.use(express.json());
 app.use("/uploads", express.static(uploadDir));
 
 
-// connect MongoDB
+// ============================
+// MongoDB Connection
+// ============================
+
 mongoose.connect(process.env.MONGO_URI)
 .then(()=>console.log("MongoDB Connected"))
 .catch(err=>console.log(err));
