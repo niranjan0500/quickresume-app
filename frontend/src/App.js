@@ -12,7 +12,7 @@ function App() {
   return (
     <BrowserRouter>
 
-      <h1>QuickResume</h1>
+      <h1>Resume Builder</h1>
 
       <Routes>
 
