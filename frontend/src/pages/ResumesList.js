@@ -63,7 +63,7 @@ function ResumesList(){
               <span>{resume.name}</span>
 
               <a
-             href={`https://quickresume-backend-niranjan.azurewebsites.net/uploads/${encodeURIComponent(resume.resume)}`}
+              href={`https://quickresume-backend-niranjan-dtfeebb8c0bba3cc.centralindia-01.azurewebsites.net/uploads/${encodeURIComponent(resume.resume)}`}
               target="_blank"
               rel="noreferrer"
               style={{
